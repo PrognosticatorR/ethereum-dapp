@@ -5,6 +5,7 @@ import Web3 from 'web3';
 import DaiToken from '../abis/DaiToken.json';
 import DappToken from '../abis/DappToken.json';
 import TokenFarm from '../abis/TokenFarm.json';
+import Main from './Main';
 
 class App extends Component {
   constructor(props) {
@@ -36,7 +37,25 @@ class App extends Component {
       window.alert('Non Ethereum browser detected. You should consider trying metamask!');
     }
   }
-
+  stakeTokens = amount => {
+    this.setState({ loading: true });
+    this.state.daiToken.methods
+      .approve(this.state.tokenFarm._address, amount)
+      .send({ from: this.state.account })
+      .on('transactionHash', hash =>
+        this.state.tokenFarm.methods
+          .stakeTokens(amount)
+          .send({ from: this.state.account })
+          .on('transactionHash', hash => this.setState({ loading: false }))
+      );
+  };
+  unStakeTokens = () => {
+    this.setState({ loading: true });
+    this.state.tokenFarm.methods
+      .unStakeTokens()
+      .send({ from: this.state.account })
+      .on('transactionHash', hash => this.setState({ loading: false }));
+  };
   async loadBlockchainData() {
     const web3 = window.web3;
     const accounts = await web3.eth.getAccounts();
@@ -73,20 +92,35 @@ class App extends Component {
     } else {
       window.alert('Dapp Token contract did not deployed to connected network.');
     }
-
     this.setState({ loading: false });
   }
 
   render() {
+    let content;
+    if (this.state.loading) {
+      content = (
+        <p id="loader" className="text-center">
+          Loading...
+        </p>
+      );
+    } else {
+      content = (
+        <Main
+          daiTokenBalance={this.state.daiTokenBalance}
+          dappTokenBalance={this.state.dappTokenBalance}
+          stakingBalance={this.state.stakingBalance}
+          stakeTokens={this.stakeTokens}
+          unStakeTokens={this.unStakeTokens}
+        />
+      );
+    }
     return (
       <div>
         <Navbar account={this.state.account} />
         <div className="container-fluid mt-5">
           <div className="row">
             <main role="main" className="col-lg-12 ml-auto mr-auto" style={{ maxWidth: '600px' }}>
-              <div className="content mr-auto ml-auto">
-                <h1>Hello, World!</h1>
-              </div>
+              <div className="content mr-auto ml-auto">{content}</div>
             </main>
           </div>
         </div>
